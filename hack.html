@@ -1,0 +1,28 @@
+<html>
+  <head>
+    <script type="text/javascript" charset="utf-8" src="http://ajax.googleapis.com/ajax/libs/jquery/1.3.2/jquery.min.js"></script>
+<!--    <script src="js-class.js"></script>
+    <script src="bluff-min.js"></script>-->
+    <script src="midibridge-0.5.1.min.js"></script>
+    <script src="hack.js"></script>
+  </head>
+  <body>
+    <h1>JavaScript DX7 Emulator</h1>
+    <form>
+    <p>
+      <select id='bankSelect'>
+	<option value='0'>Bank 0 - Brass</option>
+	<option value='1'>Bank 1 - Synth</option>
+	<option value='2'>Bank 2 - Strings</option>
+	<option value='3'>Bank 3 - Misc</option>
+	<option value='4'>Bank 4 - Organ</option>
+	<option value='5'>Bank 5 - Bells</option>
+      </select>
+    <p>
+      <select id='patchSelect'></select>
+    </p>
+    <textarea id='patchDetails' rows='40' cols='120'>
+    </textarea>
+    </form>
+  </body>
+</html>
