@@ -47,7 +47,6 @@ to work through some of these soon:
 * Many other unsupported features:
     * Velocity sensitivity.
     * Keboard level or rate scaling.
-    * Pitch envelope generation.
     * Oscillator synchronisation (kind of irrelevant with the current approach to audio generation).
     * Oscilaltor detune.
     * Transposition.
@@ -65,6 +64,34 @@ to work through some of these soon:
 Many of these are missing or broken because I don't know how they're
 supposed to work, so if anyone does, input would definitely be
 appreciated.
+
+Here's a more specific list of assumptions:
+
+* Envelope rates are linear, with 1 = full dynamic range in 1 second.
+
+* The same non-linearity is applied to LFO pitch modulation as is to
+  regular operator modulation.
+
+* LFO amplitude modulation depth is linear between 0 and half the
+  dynamic range.
+
+* Pitch envelope is applied linearly betwen +/- 4 octaves (this is a
+  /very/ bad assumption - extremes are known to be correct, but that
+  gives ridiculously low sensitivity around zero).
+
+* LFO speed is linear, with 1 = 4 Hz.
+
+* Operator feedback is implemented by taking the output value from the
+  previous sample as the input, applying the same nonlinearity as with
+  regular modulation.
+
+* Feedback level is linear between 0 and 7/50.
+
+* In fixed frequency mode, frequency = (10 ^ (coarse frequency))
+  Hz. (In practice this gives frequencies in the MHz range for some of
+  the patches I've tried, so unlikely.)
+
+
 
 ## DX7 Resources
 

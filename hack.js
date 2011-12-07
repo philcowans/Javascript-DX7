@@ -191,6 +191,10 @@ function extractPatchFromRom(romData, patchId) {
 	"lfoPitchModulationDepth": voiceData.charCodeAt(114),
 	"lfoAmplitudeModulationDepth": voiceData.charCodeAt(115),
 	"lfoWaveform": Math.floor(voiceData.charCodeAt(116) / 2) % 8,
+	    "pitchEnvelope": {
+	    "levels" : [voiceData.charCodeAt(106), voiceData.charCodeAt(107), voiceData.charCodeAt(108), voiceData.charCodeAt(109)],
+		"rates" : [voiceData.charCodeAt(102), voiceData.charCodeAt(103), voiceData.charCodeAt(104), voiceData.charCodeAt(105)]
+	}
     };
 }
 
@@ -408,10 +412,13 @@ function generateSampleData(frequencyInHertz, dataFromRom) {
     var patch = program["modulationPatches"];
     var output = program["outputMix"];
     
-    var envelopes = [0,0,0,0,0,0];
-    var envelopeSegments = [0,0,0,0,0,0];
+    // envelopes[6] is the pitch envelope
+    var envelopes = [0,0,0,0,0,0,50];
+    var envelopeSegments = [0,0,0,0,0,0,0];
 
 	var outputs = [0,0,0,0,0,0];
+
+	var phis = [0,0,0,0,0,0];
 
     for(var i = 0; i < numSamples; ++i) {
 	var t = i / sampleRate;
@@ -423,6 +430,7 @@ function generateSampleData(frequencyInHertz, dataFromRom) {
 	var lfo = getWaveform(dataFromRom["lfoWaveform"], t * dataFromRom["lfoSpeed"] * 2 * pi / 4);
 		 
 	var baseOmega = frequencyInHertz * 2 * pi; // + 0.2 * lfo * dataFromRom["lfoPitchModulationDepth"] / 99;
+	baseOmega *= Math.pow(2,(envelopes[6] - 50) / 12.5);
 
 	var operatorFrequencies = [];
 
@@ -439,11 +447,14 @@ function generateSampleData(frequencyInHertz, dataFromRom) {
 	for(var operator = 5; operator >= 0; --operator) {
 	    var modulationInput = 0;
 
-	    var phi = operatorFrequencies[operator] * t;
+	    phis[operator] += operatorFrequencies[operator] / sampleRate;
+	    var phi = phis[operator];
 	    
 	    for(var inputOperator = 0; inputOperator < patch[operator].length; ++inputOperator) {
 		phi += dxModulationLookup[parameters[patch[operator][inputOperator]]["outputLevel"]] * outputs[patch[operator][inputOperator]];
 	    }
+
+	    phi += dxModulationLookup[dataFromRom["lfoPitchModulationDepth"]] * lfo;
 	    
 	    outputs[operator] = Math.sin(phi) * envelopes[operator];
 	    
@@ -465,6 +476,25 @@ function generateSampleData(frequencyInHertz, dataFromRom) {
 		}
 	    }
 	}
+
+	var envelopeRates = dataFromRom["pitchEnvelope"]["rates"];
+	var envelopeLevels = dataFromRom["pitchEnvelope"]["levels"];
+	var envelopeSegment = envelopeSegments[6];
+	
+	var envelopeSign = (envelopeLevels[envelopeSegment]) - envelopes[6];
+	if (envelopeSign != 0) {
+	    envelopeSign /= Math.abs(envelopeSign);
+	}
+	
+	if((envelopeSegment < 3) || ((envelopeSegment == 3) && (i > (numSamples / 2)))) {
+	    envelopes[6] += envelopeSign * envelopeRates[envelopeSegment] / (sampleRate * 10);
+	    
+	    if(envelopes[6] * envelopeSign >= (envelopeLevels[envelopeSegment]) * envelopeSign) {
+		envelopes[6] = (envelopeLevels[envelopeSegment]);
+		envelopeSegments[6] += 1;
+	    }
+	}
+
    
 	var mixedOutput = 0;
 	var total = 0;
@@ -473,7 +503,8 @@ function generateSampleData(frequencyInHertz, dataFromRom) {
 	    total += parameters[output[k]]["outputLevel"];
 	}
 	mixedOutput /= total;
-	data.push(mixedOutput * safety * 32768);
+
+	data.push(mixedOutput * safety * 32768 * (1 - (((lfo + 1)/4) * dataFromRom["lfoAmplitudeModulationDepth"] / 99)));
     }
     
     return data;
