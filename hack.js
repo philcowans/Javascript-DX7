@@ -155,7 +155,7 @@ function extractPatchFromRom(romData, patchId) {
 	var oscData = voiceData.substring(oscStart, oscEnd);
 
 	
-	parameters[i]["outputLevel"] = oscData.charCodeAt(14) / 99;
+	parameters[i]["outputLevel"] = oscData.charCodeAt(14);
 
 	var freqCoarse = Math.floor(oscData.charCodeAt(15) / 2);
 	if(freqCoarse == 0) {
@@ -172,7 +172,7 @@ function extractPatchFromRom(romData, patchId) {
 	}
     	else {
 	    parameters[i]["oscMode"] = 1;
-	    parameters[i]["fixedFrequency"] = Math.pow(10, 3 - (Math.floor(oscData.charCodeAt(15) / 2) % 4)) * (1 + (freqFine / 99)*8.772);
+	    parameters[i]["fixedFrequency"] = Math.pow(10, Math.floor(oscData.charCodeAt(15) / 2)) * (1 + (freqFine / 99)*8.772);
 	}
 	
 	parameters[i]["envelope"] = {
@@ -263,6 +263,109 @@ var programs = [
 	"modulationPatches": [[], [], [], [], [], [5]] } //32
 ];
 
+var dxModulationLookup = [
+			  0,
+			  0.000337,
+			  0.000476,
+			  0.000674,
+			  0.000952,
+			  0.001235,
+			  0.001602,
+			  0.001905,
+			  0.002265,
+			  0.002694,
+			  0.003204,
+			  0.003810,
+			  0.004531,
+			  0.005388,
+			  0.006408,
+			  0.007620,
+			  0.008310,
+			  0.009062,
+			  0.010776,
+			  0.011752,
+			  0.013975,
+			  0.015240,
+			  0.016619,
+			  0.018123,
+			  0.019764,
+			  0.021552,
+			  0.023503,
+			  0.025630,
+			  0.027950,
+			  0.030480,
+			  0.033238,
+			  0.036247,
+			  0.039527,
+			  0.043105,
+			  0.047006,
+			  0.051261,
+			  0.055900,
+			  0.060960,
+			  0.066477,
+			  0.072494,
+			  0.079055,
+			  0.086210,
+			  0.094012,
+			  0.102521,
+			  0.111800,
+			  0.121919,
+			  0.132954,
+			  0.144987,
+			  0.158110,
+			  0.172420,
+			  0.188025,
+			  0.205043,
+			  0.223601,
+			  0.243838,
+			  0.265907,
+			  0.289974,
+			  0.316219,
+			  0.344839,
+			  0.376050,
+			  0.410085,
+			  0.447201,
+			  0.487676,
+			  0.531815,
+			  0.579948,
+			  0.632438,
+			  0.689679,
+			  0.752100,
+			  0.820171,
+			  0.894403,
+			  0.975353,
+			  1.063630,
+			  1.159897,
+			  1.264876,
+			  1.379357,
+			  1.504200,
+			  1.640341,
+			  1.788805,
+			  1.950706,
+			  2.127260,
+			  2.319793,
+			  2.529752,
+			  2.758714,
+			  3.008399,
+			  3.280683,
+			  3.577610,
+			  3.901411,
+			  4.254519,
+			  4.639586,
+			  5.059505,
+			  5.517429,
+			  6.016799,
+			  6.561366,
+			  7.155220,
+			  7.802823,
+			  8.509039,
+			  9.279172,
+			  10.119009,
+			  11.034858,
+			  12.033598,
+			  13.122731
+			  ];
+
 
 function getWaveform(type, phase) {
     switch(type) {
@@ -317,33 +420,33 @@ function generateSampleData(frequencyInHertz, dataFromRom) {
        	    outputs[operator2] *= dataFromRom["feedback"] / 50
 	}
 
-	var lfo = getWaveform(dataFromRom["lfoWaveform"], t * dataFromRom["lfoSpeed"] * 2 * pi / 4)
+	var lfo = getWaveform(dataFromRom["lfoWaveform"], t * dataFromRom["lfoSpeed"] * 2 * pi / 4);
 		 
-	var baseOmega = frequencyInHertz * 2 * pi + 0.2 * lfo * dataFromRom["lfoPitchModulationDepth"] / 99;
+	var baseOmega = frequencyInHertz * 2 * pi; // + 0.2 * lfo * dataFromRom["lfoPitchModulationDepth"] / 99;
+
+	var operatorFrequencies = [];
+
+	for(var operator = 0; operator < 6; ++operator) {
+	    if(parameters[operator]["oscMode"] == 0) {
+		operatorFrequencies.push(baseOmega * parameters[operator]["frequencyRatio"]);
+	    }
+	    else {
+		operatorFrequencies.push(parameters[operator]["fixedFrequency"] * 2 * pi);
+	    }
+	}
+
 
 	for(var operator = 5; operator >= 0; --operator) {
 	    var modulationInput = 0;
+
+	    var phi = operatorFrequencies[operator] * t;
+	    
 	    for(var inputOperator = 0; inputOperator < patch[operator].length; ++inputOperator) {
-		modulationInput += outputs[patch[operator][inputOperator]] / patch[operator].length;
+		phi += dxModulationLookup[parameters[patch[operator][inputOperator]]["outputLevel"]] * outputs[patch[operator][inputOperator]];
 	    }
 	    
-	    var omega;
-	    var phi;
-	    if(parameters[operator]["oscMode"] == 0) {
-		omega = baseOmega * parameters[operator]["frequencyRatio"];
-		phi = omega * t + 2 *modulationInput; 
-	    }
-	    else {
-		omega = parameters[operator]["fixedFrequency"] * 2 * pi;
-		phi = omega * t + 2 *modulationInput + 0.2 * lfo * dataFromRom["lfoPitchModulationDepth"] / 99; 
-	    }
+	    outputs[operator] = Math.sin(phi) * envelopes[operator];
 	    
-	    var lfoAMModulation =  1 - (dataFromRom["lfoAmplitudeModulationDepth"] / 500) * ( lfo + 1 ) / 2;
-
-	    var outputLevel = parameters[operator]["outputLevel"];
-
-	    outputs[operator] = Math.cos(phi) * outputLevel * lfoAMModulation * envelopes[operator];
-
 	    var envelopeRates = parameters[operator]["envelope"]["rates"];
 	    var envelopeLevels = parameters[operator]["envelope"]["levels"];
 	    var envelopeSegment = envelopeSegments[operator];
@@ -362,14 +465,14 @@ function generateSampleData(frequencyInHertz, dataFromRom) {
 		}
 	    }
 	}
-
-		envDebug.push(envelopes[0] * 1);
    
 	var mixedOutput = 0;
+	var total = 0;
 	for(var k = 0; k < output.length; ++k) {
-	    mixedOutput += outputs[output[k]];
+	    mixedOutput += outputs[output[k]] * parameters[output[k]]["outputLevel"];
+	    total += parameters[output[k]]["outputLevel"];
 	}
-	mixedOutput /= output.length;
+	mixedOutput /= total;
 	data.push(mixedOutput * safety * 32768);
     }
     
@@ -420,7 +523,7 @@ function encodeAudio16bit(data) {
 
 function generateAndPlaySample(noteNumber, voice) {
 
-    var dataFromRom = extractPatchFromRom(atob(angeloRomData[globalBank]), voice);
+    var dataFromRom = JSON.parse($('#patchDetails').val());
 
     var data = generateSampleData(midiToFrequency[noteNumber], dataFromRom);
     var sampleUrl = encodeAudio16bit(data);
