@@ -45,14 +45,14 @@ to work through some of these soon:
   level or rate scaling.
 
 * Many other unsupported features:
-** Velocity sensitivity.
-** Keboard level or rate scaling.
-** Pitch envelope generation.
-** Oscillator synchronisation (kind of irrelevant with the current approach to audio generation).
-** Oscilaltor detune.
-** Transposition.
-** Pitch bend or modulation wheel.
-** Portmanteau mode.
+    * Velocity sensitivity.
+    * Keboard level or rate scaling.
+    * Pitch envelope generation.
+    * Oscillator synchronisation (kind of irrelevant with the current approach to audio generation).
+    * Oscilaltor detune.
+    * Transposition.
+    * Pitch bend or modulation wheel.
+    * Portmanteau mode.
 
 * A better patch editing UI would be nice. Right now you can edit the
   JSON in the text area and the synthesis routines will pick it up,
